@@ -1,0 +1,21 @@
+{
+  "name": "neuro-anchor-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "extension",
+    "cli",
+    "core",
+    "dashboard"
+  ],
+  "scripts": {
+    "bootstrap": "npm install",
+    "compile": "npm run compile --prefix core && npm run compile --prefix extension && npm run compile --prefix cli",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test:unit --prefix extension",
+    "test:coverage": "npm run test:coverage --prefix extension"
+  }
+}

@@ -1,0 +1,24 @@
+# Node.js dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+build/
+
+# Code coverage reports
+.nyc_output/
+coverage/
+
+# Local cache / state
+*.log
+.DS_Store
+dashboard/dashboard_state.json
+dashboard_state.json
+
+# VS Code Cache
+.vscode/ipch/
+.vscode/uncached/
+.vscode/.eslintcache
+.vscode/tasks.json
+.vscode/launch.json

@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>⚓ Neuro-Anchor Standalone Companion</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Main Application Container -->
+      <div class="app-container">
+        
+        <!-- Header -->
+        <header class="brand-header">
+          <div class="brand-info">
+            <div class="logo">⚓</div>
+            <div class="title-wrap">
+              <h1>NEURO-ANCHOR</h1>
+              <p>Visual Companion Panel & Cognitive Support Layer</p>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div id="active-profile-badge" class="task-tag" style="background: rgba(6, 182, 212, 0.15); color: var(--color-secondary); padding: 4px 8px; font-weight: bold; border-radius: 6px;">STANDARD MODE</div>
+            <button id="help-btn" class="btn btn-secondary" style="width: auto; padding: 6px 12px; font-size: 11px;">📖 User Guide</button>
+          </div>
+        </header>
+
+        <!-- Loader Overlay -->
+        <div id="loader" class="loader-wrapper">
+          <div class="loader-dot"></div>
+          <div class="loader-dot"></div>
+          <div class="loader-dot"></div>
+          <span style="color: var(--text-muted); font-size: 12px;" id="loader-text">Querying local engine...</span>
+        </div>
+
+        <!-- Dashboard Columns Grid -->
+        <main class="dashboard-grid">
+          
+          <!-- LEFT COLUMN: Settings, Profiles, Shield & Timer -->
+          <section class="panel-left glass-panel">
+            <div class="panel-title">
+              <span>Cognitive Space Settings</span>
+              <span style="font-size: 10px; color: var(--text-muted);">Settings</span>
+            </div>
+
+            <!-- Cognitive Profiles Grid -->
+            <div style="margin-bottom: 20px;">
+              <h3 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 700;">Sensor Profile Selection</h3>
+              <div class="profile-grid">
+                <div class="profile-card active" id="profile-standard">
+                  <div class="profile-icon">🏠</div>
+                  <div class="profile-name">Standard</div>
+                </div>
+                <div class="profile-card" id="profile-focus">
+                  <div class="profile-icon">🎯</div>
+                  <div class="profile-name">Focus</div>
+                </div>
+                <div class="profile-card" id="profile-low-sensory">
+                  <div class="profile-icon">🍃</div>
+                  <div class="profile-name">Low Sensory</div>
+                </div>
+                <div class="profile-card" id="profile-debug">
+                  <div class="profile-icon">🐞</div>
+                  <div class="profile-name">Debug</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Interruption Shield DND -->
+            <div style="margin-bottom: 20px;">
+              <h3 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 700;">Interruption Shield</h3>
+              <div class="shield-box">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div id="shield-badge" class="shield-badge"></div>
+                  <div>
+                    <div style="font-weight: 600; font-size: 12px;">Do Not Disturb</div>
+                    <div id="shield-status-text" style="font-size: 10px; color: var(--text-muted);">Buffer notifications & queue inputs</div>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="dnd-switch">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <!-- DND Timer Progress Ring -->
+              <div id="dnd-timer-panel" style="display: none;">
+                <div class="timer-container">
+                  <div class="timer-ring">
+                    <svg class="timer-svg" viewBox="0 0 60 60">
+                      <circle class="timer-circle-bg" cx="30" cy="30" r="27" />
+                      <circle class="timer-circle-progress" id="timer-progress" cx="30" cy="30" r="27" />
+                    </svg>
+                    <div class="timer-text" id="timer-text">25:00</div>
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 12px; margin-bottom: 4px;">Pomodoro Focus Timer</div>
+                    <button class="btn btn-secondary" id="timer-reset-btn" style="padding: 4px 8px; font-size: 10px; width: auto;">Reset to 25m</button>
+                  </div>
+                </div>
+
+                <!-- Distraction Queue Buffer -->
+                <div style="margin-top: 14px;">
+                  <h3 style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; font-weight: 700;">Distraction Buffer Queue</h3>
+                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <textarea id="queue-input" placeholder="Type thoughts or interruptions to process later..." style="margin-bottom: 0; min-height: 38px;"></textarea>
+                    <button id="queue-add-btn" class="btn" style="width: auto; padding: 0 14px;">Add</button>
+                  </div>
+                  <div id="queue-list" class="queue-list">
+                    <!-- Distractions list goes here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Whitelisted Command Controls (For ease of running CLI options) -->
+            <div>
+              <h3 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 700;">Quick Action Panel</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button class="btn btn-secondary quick-cmd" data-cmd="git status">Git Status</button>
+                <button class="btn btn-secondary quick-cmd" data-cmd="git diff">Git Diff</button>
+                <button class="btn btn-secondary quick-cmd" data-cmd="npm run compile">Run Compile</button>
+                <button class="btn btn-secondary quick-cmd" data-cmd="npm test">Run Tests</button>
+              </div>
+              
+              <!-- Console Log Output -->
+              <div id="console-output-box" style="display: none; margin-top: 12px;">
+                <h3 style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; font-weight: 700;">Console Output</h3>
+                <pre id="console-output" style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--glass-border); padding: 8px; border-radius: 6px; font-family: monospace; font-size: 10px; color: var(--color-success); max-height: 120px; overflow-y: auto; white-space: pre-wrap;"></pre>
+              </div>
+            </div>
+          </section>
+          
+          <!-- CENTER COLUMN: Ticket Compiler & Tasks Playlist -->
+          <section class="panel-center glass-panel">
+            <div class="panel-title">
+              <span>Ticket Compiler</span>
+              <span style="font-size: 10px; color: var(--text-muted);">Breakdowns</span>
+            </div>
+
+            <p style="color: var(--text-muted); font-size: 11px; margin-bottom: 12px;">
+              Paste your vague ticket details, user stories, or slack logs. The compiler deconstructs it into bite-sized actionable checklists.
+            </p>
+
+            <textarea id="ticket-input" placeholder="Paste issue content or details here..."></textarea>
+            
+            <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 16px;">
+              <div style="flex: 1;">
+                <label for="mode-select" style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; display: block; font-weight: 700;">Cognitive mode size</label>
+                <select id="mode-select">
+                  <option value="5-minute">5-Minute Mode (Tiny checklists)</option>
+                  <option value="15-minute" selected>15-Minute Mode (Logical tasks)</option>
+                  <option value="deep-work">Deep Work Mode (Milestones)</option>
+                  <option value="low-energy">Low Energy Mode (Extremely minimal effort)</option>
+                </select>
+              </div>
+              <button id="compile-btn" class="btn" style="width: auto; padding: 10px 20px;">⚡ Compile</button>
+            </div>
+
+            <!-- Checklist Playlist container -->
+            <div id="tasks-output-panel" style="display: none;">
+              <h3 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 700;">Actionable Microtasks Playlist</h3>
+              <div id="tasks-playlist" class="tasks-playlist">
+                <!-- Render compiled microtasks -->
+              </div>
+            </div>
+          </section>
+
+          <!-- RIGHT COLUMN: Context Recovery & PR Translator -->
+          <section class="panel-right glass-panel">
+            
+            <!-- Context recovery panel -->
+            <div style="margin-bottom: 24px;">
+              <div class="panel-title">
+                <span>Context Recovery</span>
+                <span style="font-size: 10px; color: var(--text-muted);">Restoration</span>
+              </div>
+              <p style="color: var(--text-muted); font-size: 11px; margin-bottom: 12px;">
+                Ask "What was I doing?" to reconstruct where you left off based on workspace git revisions and recent state.
+              </p>
+              <button id="checkpoint-btn" class="btn">⚓ Reconstruct Context Checkpoint</button>
+
+              <!-- Checkpoint Output Card -->
+              <div id="checkpoint-display" style="display: none; margin-top: 14px;" class="checkpoint-wrapper">
+                <div class="checkpoint-block">
+                  <div class="checkpoint-title">Feature Context</div>
+                  <div class="checkpoint-val" id="checkpoint-working">Reconstructing...</div>
+                </div>
+
+                <div class="checkpoint-block">
+                  <div class="checkpoint-title">Last Known State</div>
+                  <div class="checkpoint-val" id="checkpoint-state">No changes recorded.</div>
+                </div>
+
+                <div>
+                  <div class="checkpoint-title" style="margin-bottom: 2px;">Files Modified</div>
+                  <div id="checkpoint-files">
+                    <!-- File chips -->
+                  </div>
+                </div>
+
+                <div class="checkpoint-block">
+                  <div class="checkpoint-title">Next logical step</div>
+                  <div class="checkpoint-val" id="checkpoint-next">Analyze test suite.</div>
+                </div>
+
+                <div>
+                  <div class="checkpoint-title" style="margin-bottom: 2px;">Suggested Terminal Command</div>
+                  <div class="cmd-box" id="suggested-cmd-box">
+                    <span id="checkpoint-cmd">npm test</span>
+                    <span>▶</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PR Feedback translator panel -->
+            <div>
+              <div class="panel-title">
+                <span>PR Feedback Translator</span>
+                <span style="font-size: 10px; color: var(--text-muted);">Social Support</span>
+              </div>
+              <p style="color: var(--text-muted); font-size: 11px; margin-bottom: 12px;">
+                Unpack cryptically written reviews or indirect remarks into plain action items and polite responses.
+              </p>
+              <textarea id="pr-input" placeholder="Paste cryptic reviewer comment (e.g. 'Is there a reason we did this?')"></textarea>
+              <button id="translate-btn" class="btn">Unpack Comment</button>
+
+              <!-- Translation Output -->
+              <div id="pr-output" class="pr-output-wrapper" style="display: none;">
+                <div class="pr-block">
+                  <div class="pr-block-hdr">🔍 Intended Meaning</div>
+                  <div class="pr-block-val" id="pr-meaning">...</div>
+                </div>
+
+                <div class="pr-block">
+                  <div class="pr-block-hdr">🛠 Actionable Next Step</div>
+                  <div class="pr-block-val" id="pr-action">...</div>
+                </div>
+
+                <div class="pr-block">
+                  <span id="copy-reply-badge" class="copy-badge">Copy</span>
+                  <div class="pr-block-hdr">💬 Suggested Polite Reply</div>
+                  <div class="pr-block-val" id="pr-reply" style="font-style: italic; color: #a78bfa;">...</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </main>
+        
+        <!-- Bottom Spacer -->
+        <footer style="margin-top: 40px; padding: 16px 0; text-align: center; border-top: 1px solid var(--glass-border); color: var(--text-muted); font-size: 11px;">
+          Neuro-Anchor Companion Dashboard &copy; 2026. Made with ❤️ for neurodivergent developers.
+        </footer>
+      </div>
+    </div>
+
+    <!-- MODAL BACKDROP -->
+    <div id="modal-backdrop"></div>
+
+    <!-- DOCUMENTATION GUIDE MODAL -->
+    <div id="help-modal" class="glass-panel" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 700px; z-index: 1000; max-height: 85vh; overflow-y: auto; background: rgba(18, 14, 46, 0.96); border: 2px solid var(--color-primary); box-shadow: 0 0 40px rgba(139, 92, 246, 0.4); padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; margin-bottom: 16px;">
+        <h2 style="font-size: 18px; font-weight: 800; background: linear-gradient(to right, #ffffff, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📖 Neuro-Anchor Usage Guide</h2>
+        <button id="close-help-btn" class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 12px;">✕ Close</button>
+      </div>
+
+      <div style="font-size: 12px; line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <h3 style="color: var(--color-secondary); font-size: 13px; font-weight: 700; margin-bottom: 4px;">What is Neuro-Anchor?</h3>
+          <p>
+            Neuro-Anchor is a cognitive accessibility layer designed to support neurodivergent software engineers (ADHD, Autism, Dyslexia, and others) by reducing cognitive load, buffering distractions, deconstructing vague specs, and helping context recovery.
+          </p>
+        </div>
+
+        <div>
+          <h3 style="color: var(--color-secondary); font-size: 13px; font-weight: 700; margin-bottom: 4px;">Key Features</h3>
+          <ul style="padding-left: 20px; list-style-type: square; display: flex; flex-direction: column; gap: 6px;">
+            <li><strong>Cognitive Profiles:</strong> Modify the IDE environment sensory factors. Standard Mode, Focus Mode (hides sidebars/minimaps), and Low Sensory Mode (mutes squiggles/animations).</li>
+            <li><strong>Interruption Shield:</strong> Toggles DND, buffers notifications, starts a Pomodoro timer, and stores interruptions in a list to look at later.</li>
+            <li><strong>Ticket compiler:</strong> Decodes complex, vague descriptions into bite-sized step-by-step tasks so you don't get paralyzed figuring out how to start.</li>
+            <li><strong>Context checkpoint:</strong> Queries Git and recent terminal commands to formulate a "What was I doing?" recovery summary to help restart when context-switched.</li>
+            <li><strong>PR Feedback Translator:</strong> Translates passive-aggressive or vague code reviews into clear, actionable steps and provides replies.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="color: var(--color-secondary); font-size: 13px; font-weight: 700; margin-bottom: 4px;">How to run the CLI Options</h3>
+          <p>If you prefer using the terminal command line directly, the following commands are available:</p>
+          <pre style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--glass-border); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; margin-top: 6px; color: var(--color-secondary);">
+# Reconstruct current state summary
+neuro-anchor status
+
+# Compile ticket with specific cognitive granularity
+neuro-anchor compile "Ticket title/body" --mode 5m
+
+# Unpack confusing pull request remarks
+neuro-anchor translate "PR feedback comment"
+
+# Turn interruption shield on or off
+neuro-anchor shield on
+neuro-anchor shield off</pre>
+        </div>
+
+        <div>
+          <h3 style="color: var(--color-secondary); font-size: 13px; font-weight: 700; margin-bottom: 4px;">Local Execution Whitelist</h3>
+          <p>
+            For safety, only specific commands are whitelisted for execution from the UI: <code>npm run compile</code>, <code>npm test</code>, <code>npm run build</code>, <code>git status</code>, and <code>git diff</code>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

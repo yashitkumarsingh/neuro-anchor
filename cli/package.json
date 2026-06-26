@@ -1,0 +1,21 @@
+{
+  "name": "neuro-anchor-cli",
+  "version": "0.1.0",
+  "description": "CLI interface for neuro-anchor developer companion",
+  "main": "dist/index.js",
+  "bin": {
+    "neuro-anchor": "./dist/index.js"
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "build": "npm run compile"
+  },
+  "dependencies": {
+    "@neuro-anchor/core": "file:../core"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "typescript": "^4.9.5"
+  }
+}
