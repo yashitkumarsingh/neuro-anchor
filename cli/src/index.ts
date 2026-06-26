@@ -19,6 +19,13 @@ const colors = {
 const args = process.argv.slice(2);
 const command = args[0] || 'help';
 
+// Parse format flag
+const formatIdx = args.indexOf('--format');
+let format = 'text';
+if (formatIdx !== -1 && args[formatIdx + 1]) {
+  format = args[formatIdx + 1].toLowerCase();
+}
+
 async function main() {
   switch (command) {
     case 'status':
@@ -57,23 +64,54 @@ ${colors.bold}Commands:${colors.reset}
 ${colors.bold}Options for compile:${colors.reset}
   --mode <5m | 15m | deep | low>   Task breakdown grain (default: 15m)
 
+${colors.bold}Global Options:${colors.reset}
+  --format <text | json | markdown | md>   Output formatting style (default: text)
+
 ${colors.bold}Examples:${colors.reset}
-  neuro-anchor status
-  neuro-anchor compile "Implement email webhook cancellation" --mode 5m
-  neuro-anchor translate "Not sure if this is the right architecture..."
+  neuro-anchor status --format markdown
+  neuro-anchor compile "Implement email webhook cancellation" --mode 5m --format json
+  neuro-anchor translate "Not sure if this is the right architecture..." --format md
 `);
 }
 
 // Handle Context Recovery Checkpoint
 async function handleStatus() {
-  console.log(`${colors.gray}Reading workspace state...${colors.reset}`);
-  
   const gitDiff = await runCmd('git diff --stat');
   const gitStatus = await runCmd('git status --short');
   
+  const changes = gitDiff || gitStatus || '';
+  const checkpoint = LocalAi.heuristicContextCheckpoint(gitDiff, [], '');
+
+  if (format === 'json') {
+    console.log(JSON.stringify(checkpoint, null, 2));
+    return;
+  }
+
+  if (format === 'markdown' || format === 'md') {
+    const changedFilesList = checkpoint.changedFiles && checkpoint.changedFiles.length > 0
+      ? checkpoint.changedFiles.map(f => `- \`${f}\``).join('\n')
+      : 'No files modified.';
+
+    console.log(`# Context Restoration Point
+
+## Last Known State
+- **Working On**: ${checkpoint.workingOn}
+- **State**: ${checkpoint.lastState}
+
+### Changed Files
+${changedFilesList}
+
+## Suggested Next Step
+- **Action**: ${checkpoint.nextStep}
+- **Suggested Command**: \`${checkpoint.suggestedCommand}\`
+`);
+    return;
+  }
+
+  // Text output mode
+  console.log(`${colors.gray}Reading workspace state...${colors.reset}`);
   console.log(`\n${colors.violet}${colors.bold}=== Context Restore Point ===${colors.reset}\n`);
   
-  const changes = gitDiff || gitStatus || 'No current local changes.';
   const changedFiles = changes.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
   console.log(`${colors.bold}Last Known State:${colors.reset}`);
@@ -87,9 +125,7 @@ async function handleStatus() {
     console.log(`  ${colors.gray}Workspace is clean.${colors.reset}`);
   }
 
-  // Suggest next steps using core heuristics
   console.log(`\n${colors.bold}Suggested next step:${colors.reset}`);
-  const checkpoint = LocalAi.heuristicContextCheckpoint(gitDiff, [], '');
   console.log(`  ${checkpoint.nextStep}`);
   console.log(`  Command: ${colors.cyan}${checkpoint.suggestedCommand}${colors.reset}`);
   console.log();
@@ -114,11 +150,30 @@ async function handleCompile() {
     else if (val === 'low') mode = 'low-energy';
   }
 
-  console.log(`${colors.gray}Compiling ticket in ${mode} mode using shared core...${colors.reset}`);
+  if (format === 'text') {
+    console.log(`${colors.gray}Compiling ticket in ${mode} mode using shared core...${colors.reset}`);
+  }
 
-  // Query core LocalAi engine
   const tasks = await LocalAi.compileTicket(ticketText, mode);
   
+  if (format === 'json') {
+    console.log(JSON.stringify(tasks, null, 2));
+    return;
+  }
+
+  if (format === 'markdown' || format === 'md') {
+    console.log(`# Actionable Microtasks (${mode})\n`);
+    tasks.forEach((t, i) => {
+      console.log(`- [ ] **Step ${i + 1}: ${t.title}**`);
+      if (t.duration) console.log(`  - **Estimated Duration**: ${t.duration}`);
+      if (t.files && t.files.length > 0) console.log(`  - **Target Files**: ${t.files.map(f => `\`${f}\``).join(', ')}`);
+      if (t.command) console.log(`  - **Run Command**: \`${t.command}\``);
+      if (t.verification) console.log(`  - **Verification**: ${t.verification}`);
+    });
+    console.log();
+    return;
+  }
+
   console.log(`\n${colors.violet}${colors.bold}=== Actionable Microtasks (${mode}) ===${colors.reset}\n`);
   tasks.forEach((t, i) => {
     console.log(`${colors.bold}[ ] Step ${i + 1}: ${t.title}${colors.reset}`);
@@ -138,8 +193,31 @@ async function handleTranslate() {
     return;
   }
 
-  console.log(`${colors.gray}Translating feedback using shared core...${colors.reset}\n`);
+  if (format === 'text') {
+    console.log(`${colors.gray}Translating feedback using shared core...${colors.reset}\n`);
+  }
+
   const result = await LocalAi.translatePRFeedback(feedback);
+
+  if (format === 'json') {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (format === 'markdown' || format === 'md') {
+    console.log(`# PR Feedback Translation
+
+## 🔍 Likely Meaning
+${result.meaning}
+
+## 🛠 Actionable Next Step
+${result.action}
+
+## 💬 Suggested Polite Reply
+> ${result.reply}
+`);
+    return;
+  }
 
   console.log(`${colors.violet}${colors.bold}=== Feedback Translated ===${colors.reset}\n`);
   console.log(`${colors.bold}🔍 Likely Meaning:${colors.reset}`);
@@ -170,7 +248,6 @@ function handleShield() {
 }
 
 // --- COMMAND EXECUTION RUNNERS ---
-
 function runCmd(command: string): Promise<string> {
   return new Promise((resolve) => {
     exec(command, (err, stdout) => {

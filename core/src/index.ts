@@ -26,8 +26,8 @@ export interface ContextRecoveryState {
 
 export class LocalAi {
   public static config = {
-    url: 'http://localhost:11434',
-    model: 'llama3'
+    url: (typeof process !== 'undefined' && process.env && process.env.NEURO_ANCHOR_URL) || 'http://localhost:11434',
+    model: (typeof process !== 'undefined' && process.env && process.env.NEURO_ANCHOR_MODEL) || 'llama3'
   };
 
   /**
