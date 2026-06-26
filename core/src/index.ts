@@ -24,11 +24,37 @@ export interface ContextRecoveryState {
   suggestedCommand: string;
 }
 
-export class LocalAi {
-  public static config = {
-    url: (typeof process !== 'undefined' && process.env && process.env.NEURO_ANCHOR_URL) || 'http://localhost:11434',
-    model: (typeof process !== 'undefined' && process.env && process.env.NEURO_ANCHOR_MODEL) || 'llama3'
+function loadConfig() {
+  const defaults = {
+    url: 'http://localhost:11434',
+    model: 'llama3'
   };
+
+  if (typeof process !== 'undefined' && typeof require !== 'undefined') {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(process.cwd(), '.neuro-anchor.json');
+      if (fs.existsSync(configPath)) {
+        const fileConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        if (fileConfig.url) defaults.url = fileConfig.url;
+        if (fileConfig.model) defaults.model = fileConfig.model;
+      }
+    } catch {}
+
+    if (process.env && process.env.NEURO_ANCHOR_URL) {
+      defaults.url = process.env.NEURO_ANCHOR_URL;
+    }
+    if (process.env && process.env.NEURO_ANCHOR_MODEL) {
+      defaults.model = process.env.NEURO_ANCHOR_MODEL;
+    }
+  }
+
+  return defaults;
+}
+
+export class LocalAi {
+  public static config = loadConfig();
 
   /**
    * Helper to perform HTTP JSON POST request against local Ollama API

@@ -15,7 +15,7 @@
     "bootstrap": "npm install",
     "compile": "npm run compile --prefix core && npm run compile --prefix extension && npm run compile --prefix cli",
     "build": "npm run build --workspaces --if-present",
-    "test": "npm run test:unit --prefix extension",
+    "test": "npm run test:unit --prefix extension && npm run test --prefix cli",
     "test:coverage": "npm run test:coverage --prefix extension"
   }
 }

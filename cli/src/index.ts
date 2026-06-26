@@ -2,22 +2,11 @@
 
 import { exec } from 'child_process';
 import { LocalAi } from '@neuro-anchor/core';
-
-// ANSI coloring codes for premium terminal layout
-const colors = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  cyan: '\x1b[36m',
-  violet: '\x1b[35m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  gray: '\x1b[90m',
-  bgGray: '\x1b[100m'
-};
+import { colors, renderStatus, renderCompile, renderTranslate, renderShield } from './renderer';
+import { runInteractiveMenu } from './commands/interactive';
 
 const args = process.argv.slice(2);
-const command = args[0] || 'help';
+const command = args[0];
 
 // Parse format flag
 const formatIdx = args.indexOf('--format');
@@ -27,6 +16,12 @@ if (formatIdx !== -1 && args[formatIdx + 1]) {
 }
 
 async function main() {
+  // Default to interactive menu if no arguments are provided
+  if (!command || command === 'interactive') {
+    await runInteractiveMenu();
+    return;
+  }
+
   switch (command) {
     case 'status':
       await handleStatus();
@@ -53,9 +48,10 @@ function printHelp() {
 ${colors.violet}${colors.bold}⚓ NEURO-ANCHOR CLI - Cognitive developer support layer${colors.reset}
 
 ${colors.bold}Usage:${colors.reset}
-  neuro-anchor <command> [options]
+  neuro-anchor [command] [options]
 
 ${colors.bold}Commands:${colors.reset}
+  ${colors.cyan}interactive${colors.reset}              Launch the interactive helper menu (Default)
   ${colors.cyan}status${colors.reset}                   Check your current workspace context recovery state ("What was I doing?")
   ${colors.cyan}compile <ticket>${colors.reset}       Break down a ticket into actionable microtasks
   ${colors.cyan}translate <feedback>${colors.reset}   Translate cryptic or indirect PR comments into plain language
@@ -68,6 +64,7 @@ ${colors.bold}Global Options:${colors.reset}
   --format <text | json | markdown | md>   Output formatting style (default: text)
 
 ${colors.bold}Examples:${colors.reset}
+  neuro-anchor
   neuro-anchor status --format markdown
   neuro-anchor compile "Implement email webhook cancellation" --mode 5m --format json
   neuro-anchor translate "Not sure if this is the right architecture..." --format md
@@ -80,55 +77,11 @@ async function handleStatus() {
   const gitStatus = await runCmd('git status --short');
   
   const changes = gitDiff || gitStatus || '';
-  const checkpoint = LocalAi.heuristicContextCheckpoint(gitDiff, [], '');
+  const checkpoint = await LocalAi.generateContextCheckpoint(gitDiff, [], '');
 
-  if (format === 'json') {
-    console.log(JSON.stringify(checkpoint, null, 2));
-    return;
-  }
-
-  if (format === 'markdown' || format === 'md') {
-    const changedFilesList = checkpoint.changedFiles && checkpoint.changedFiles.length > 0
-      ? checkpoint.changedFiles.map(f => `- \`${f}\``).join('\n')
-      : 'No files modified.';
-
-    console.log(`# Context Restoration Point
-
-## Last Known State
-- **Working On**: ${checkpoint.workingOn}
-- **State**: ${checkpoint.lastState}
-
-### Changed Files
-${changedFilesList}
-
-## Suggested Next Step
-- **Action**: ${checkpoint.nextStep}
-- **Suggested Command**: \`${checkpoint.suggestedCommand}\`
-`);
-    return;
-  }
-
-  // Text output mode
-  console.log(`${colors.gray}Reading workspace state...${colors.reset}`);
-  console.log(`\n${colors.violet}${colors.bold}=== Context Restore Point ===${colors.reset}\n`);
-  
   const changedFiles = changes.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  
-  console.log(`${colors.bold}Last Known State:${colors.reset}`);
-  if (gitDiff) {
-    console.log(`  ${colors.yellow}Modified Files:${colors.reset}`);
-    changedFiles.forEach(file => console.log(`   - ${file}`));
-  } else if (gitStatus) {
-    console.log(`  ${colors.yellow}Staged/Untracked Files:${colors.reset}`);
-    changedFiles.forEach(file => console.log(`   - ${file}`));
-  } else {
-    console.log(`  ${colors.gray}Workspace is clean.${colors.reset}`);
-  }
-
-  console.log(`\n${colors.bold}Suggested next step:${colors.reset}`);
-  console.log(`  ${checkpoint.nextStep}`);
-  console.log(`  Command: ${colors.cyan}${checkpoint.suggestedCommand}${colors.reset}`);
-  console.log();
+  const rendered = renderStatus(checkpoint, changedFiles, format);
+  console.log(rendered);
 }
 
 // Handle Ticket-to-Microtask compiler
@@ -151,38 +104,12 @@ async function handleCompile() {
   }
 
   if (format === 'text') {
-    console.log(`${colors.gray}Compiling ticket in ${mode} mode using shared core...${colors.reset}`);
+    console.log(`${colors.gray}Compiling ticket in ${colors.reset}${colors.bold}${mode}${colors.reset}${colors.gray} mode using shared core...${colors.reset}`);
   }
 
   const tasks = await LocalAi.compileTicket(ticketText, mode);
-  
-  if (format === 'json') {
-    console.log(JSON.stringify(tasks, null, 2));
-    return;
-  }
-
-  if (format === 'markdown' || format === 'md') {
-    console.log(`# Actionable Microtasks (${mode})\n`);
-    tasks.forEach((t, i) => {
-      console.log(`- [ ] **Step ${i + 1}: ${t.title}**`);
-      if (t.duration) console.log(`  - **Estimated Duration**: ${t.duration}`);
-      if (t.files && t.files.length > 0) console.log(`  - **Target Files**: ${t.files.map(f => `\`${f}\``).join(', ')}`);
-      if (t.command) console.log(`  - **Run Command**: \`${t.command}\``);
-      if (t.verification) console.log(`  - **Verification**: ${t.verification}`);
-    });
-    console.log();
-    return;
-  }
-
-  console.log(`\n${colors.violet}${colors.bold}=== Actionable Microtasks (${mode}) ===${colors.reset}\n`);
-  tasks.forEach((t, i) => {
-    console.log(`${colors.bold}[ ] Step ${i + 1}: ${t.title}${colors.reset}`);
-    if (t.duration) console.log(`    ${colors.gray}Est: ${t.duration}${colors.reset}`);
-    if (t.files && t.files.length > 0) console.log(`    ${colors.yellow}Files: ${t.files.join(', ')}${colors.reset}`);
-    if (t.command) console.log(`    ${colors.cyan}Run: ${t.command}${colors.reset}`);
-    if (t.verification) console.log(`    ${colors.gray}Verify: ${t.verification}${colors.reset}`);
-    console.log();
-  });
+  const rendered = renderCompile(tasks, mode, format);
+  console.log(rendered);
 }
 
 // Handle PR Feedback Translation
@@ -198,34 +125,8 @@ async function handleTranslate() {
   }
 
   const result = await LocalAi.translatePRFeedback(feedback);
-
-  if (format === 'json') {
-    console.log(JSON.stringify(result, null, 2));
-    return;
-  }
-
-  if (format === 'markdown' || format === 'md') {
-    console.log(`# PR Feedback Translation
-
-## 🔍 Likely Meaning
-${result.meaning}
-
-## 🛠 Actionable Next Step
-${result.action}
-
-## 💬 Suggested Polite Reply
-> ${result.reply}
-`);
-    return;
-  }
-
-  console.log(`${colors.violet}${colors.bold}=== Feedback Translated ===${colors.reset}\n`);
-  console.log(`${colors.bold}🔍 Likely Meaning:${colors.reset}`);
-  console.log(`  ${result.meaning}\n`);
-  console.log(`${colors.bold}🛠 Actionable Next Step:${colors.reset}`);
-  console.log(`  ${result.action}\n`);
-  console.log(`${colors.bold}💬 Suggested Reply:${colors.reset}`);
-  console.log(`  ${colors.green}"${result.reply}"${colors.reset}\n`);
+  const rendered = renderTranslate(result, format);
+  console.log(rendered);
 }
 
 // Handle Interruption Shield DND simulation
@@ -238,13 +139,9 @@ function handleShield() {
     return;
   }
 
-  if (stateArg.toLowerCase() === 'on') {
-    console.log(`\n${colors.bold}🛡  Interruption Shield: ${colors.green}ACTIVE${colors.reset}`);
-    console.log(`${colors.gray}Do Not Disturb initiated. Buffering Slack/emails. Focus timer started for 25 mins.${colors.reset}\n`);
-  } else {
-    console.log(`\n${colors.bold}🛡  Interruption Shield: ${colors.red}DISABLED${colors.reset}`);
-    console.log(`${colors.gray}Standard notification flow resumed.${colors.reset}\n`);
-  }
+  const active = stateArg.toLowerCase() === 'on';
+  const rendered = renderShield(active, format);
+  console.log(rendered);
 }
 
 // --- COMMAND EXECUTION RUNNERS ---
