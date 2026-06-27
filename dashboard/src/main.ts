@@ -100,6 +100,13 @@ const closeHelpBtn = document.getElementById('close-help-btn') as HTMLButtonElem
 const helpModal = document.getElementById('help-modal') as HTMLDivElement;
 const modalBackdrop = document.getElementById('modal-backdrop') as HTMLDivElement;
 
+const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
+const closeSettingsBtn = document.getElementById('close-settings-btn') as HTMLButtonElement;
+const settingsModal = document.getElementById('settings-modal') as HTMLDivElement;
+const configUrlInput = document.getElementById('config-url-input') as HTMLInputElement;
+const configModelInput = document.getElementById('config-model-input') as HTMLInputElement;
+const saveConfigBtn = document.getElementById('save-config-btn') as HTMLButtonElement;
+
 // Helper - Load state from server or localStorage
 async function init() {
   showLoader('Bootstrapping companion workspace state...');
@@ -357,31 +364,56 @@ function renderTasks() {
   document.querySelectorAll('.run-diff').forEach((el) => {
     el.addEventListener('click', async (e) => {
       const file = (e.target as HTMLElement).getAttribute('data-file') || '';
-      consoleOutputBox.style.display = 'block';
-      consoleOutput.innerText = `Analyzing diff for file: ${file}...\n`;
-      try {
-        const res = await fetch('/api/executeCommand', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: 'git diff' })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          // Filter diff stdout to lines containing the filename to mimic file diff
-          const fullDiff = data.stdout || '';
-          if (fullDiff) {
-            consoleOutput.innerText = fullDiff;
-          } else {
-            consoleOutput.innerText = `No uncommitted git modifications detected for: ${file}`;
-          }
-        }
-      } catch (err) {
-        consoleOutput.innerText += `Error executing git diff: ${(err as Error).message}`;
-      }
+      await handleFileChipClick(file);
     });
   });
 
   tasksOutputPanel.style.display = 'block';
+}
+
+async function openFileInIde(file: string): Promise<boolean> {
+  try {
+    const res = await fetch('http://localhost:5174/openFile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return !!data.success;
+    }
+  } catch (err) {
+    console.log('Ide deep-link server is offline or unreachable:', err);
+  }
+  return false;
+}
+
+async function handleFileChipClick(file: string) {
+  const openedInIde = await openFileInIde(file);
+  if (openedInIde) {
+    return;
+  }
+
+  consoleOutputBox.style.display = 'block';
+  consoleOutput.innerText = `Analyzing diff for file: ${file}...\n`;
+  try {
+    const res = await fetch('/api/executeCommand', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'git diff' })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const fullDiff = data.stdout || '';
+      if (fullDiff) {
+        consoleOutput.innerText = fullDiff;
+      } else {
+        consoleOutput.innerText = `No uncommitted git modifications detected for: ${file}`;
+      }
+    }
+  } catch (err) {
+    consoleOutput.innerText += `Error executing git diff: ${(err as Error).message}`;
+  }
 }
 
 // Local command runner
@@ -534,9 +566,7 @@ function setupEventListeners() {
           document.querySelectorAll('#checkpoint-files .run-diff').forEach((el) => {
             el.addEventListener('click', async (e) => {
               const file = (e.target as HTMLElement).getAttribute('data-file') || '';
-              consoleOutputBox.style.display = 'block';
-              consoleOutput.innerText = `Analyzing diff: ${file}...\n`;
-              await runLocalCommand('git diff');
+              await handleFileChipClick(file);
             });
           });
         } else {
@@ -607,6 +637,65 @@ function setupEventListeners() {
       alert('Clipboard access denied.');
     });
   });
+
+  // Settings modal listeners
+  settingsBtn.addEventListener('click', async () => {
+    showLoader('Fetching local AI configuration...');
+    try {
+      const res = await fetch('/api/getConfig');
+      if (res.ok) {
+        const config = await res.json();
+        configUrlInput.value = config.url || '';
+        configModelInput.value = config.model || '';
+        
+        settingsModal.style.display = 'block';
+        modalBackdrop.style.display = 'block';
+      } else {
+        alert('Failed to retrieve configuration settings.');
+      }
+    } catch (err) {
+      alert(`Error fetching config: ${(err as Error).message}`);
+    } finally {
+      hideLoader();
+    }
+  });
+
+  const closeSettings = () => {
+    settingsModal.style.display = 'none';
+    modalBackdrop.style.display = 'none';
+  };
+  closeSettingsBtn.addEventListener('click', closeSettings);
+
+  saveConfigBtn.addEventListener('click', async () => {
+    const url = configUrlInput.value.trim();
+    const model = configModelInput.value.trim();
+    if (!url || !model) {
+      alert('URL and Model name fields are required!');
+      return;
+    }
+
+    showLoader('Updating workspace configuration...');
+    try {
+      const res = await fetch('/api/saveConfig', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, model })
+      });
+      if (res.ok) {
+        closeSettings();
+        alert('Configuration settings updated successfully!');
+      } else {
+        const data = await res.json();
+        alert(`Failed to save config: ${data.error}`);
+      }
+    } catch (err) {
+      alert(`Error saving config: ${(err as Error).message}`);
+    } finally {
+      hideLoader();
+    }
+  });
+
+  modalBackdrop.addEventListener('click', closeSettings);
 }
 
 // Kick off logic initialization

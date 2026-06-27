@@ -89,6 +89,36 @@ const apiPlugin = () => ({
           return;
         }
 
+        if (pathname === '/api/getConfig' && req.method === 'GET') {
+          res.end(JSON.stringify({
+            url: LocalAi.config.url,
+            model: LocalAi.config.model
+          }));
+          return;
+        }
+
+        if (pathname === '/api/saveConfig' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk: any) => body += chunk);
+          req.on('end', () => {
+            try {
+              const { url, model } = JSON.parse(body);
+              const configPath = path.join(__dirname, '..', '.neuro-anchor.json');
+              const targetConfig = { url, model };
+              fs.writeFileSync(configPath, JSON.stringify(targetConfig, null, 2), 'utf-8');
+              
+              LocalAi.config.url = url;
+              LocalAi.config.model = model;
+              
+              res.end(JSON.stringify({ success: true }));
+            } catch (err) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: (err as Error).message }));
+            }
+          });
+          return;
+        }
+
         if (pathname === '/api/compile' && req.method === 'POST') {
           let body = '';
           req.on('data', (chunk: any) => body += chunk);

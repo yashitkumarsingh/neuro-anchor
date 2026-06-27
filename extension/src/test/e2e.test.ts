@@ -12,6 +12,11 @@ const mockWorkspaceState = (global as any).mockWorkspaceState;
 const mockWorkspaceConfig = (global as any).mockWorkspaceConfig;
 
 const mockVscode = {
+  commands: {
+    registerCommand: (id: string, callback: (...args: any[]) => any) => ({
+      dispose: () => {}
+    })
+  },
   workspace: {
     workspaceFolders: [{ uri: { fsPath: '/mock/workspace' } }],
     getConfiguration: () => ({
@@ -29,7 +34,12 @@ const mockVscode = {
       })
     }),
     openTextDocument: async (path: string) => ({ path }),
-    createFileSystemWatcher: () => ({ dispose: () => {} })
+    createFileSystemWatcher: () => ({
+      dispose: () => {},
+      onDidChange: () => ({ dispose: () => {} }),
+      onDidCreate: () => ({ dispose: () => {} }),
+      onDidDelete: () => ({ dispose: () => {} })
+    })
   },
   window: {
     terminals: [] as any[],
@@ -44,7 +54,14 @@ const mockVscode = {
       };
       mockVscode.window.terminals.push(term);
       return term;
-    }
+    },
+    showTextDocument: async (doc: any) => doc,
+    registerWebviewViewProvider: (viewId: string, provider: any) => ({
+      dispose: () => {}
+    }),
+    onDidChangeActiveTextEditor: (callback: (editor: any) => any) => ({
+      dispose: () => {}
+    })
   },
   ConfigurationTarget: {
     Workspace: 2
@@ -101,20 +118,21 @@ try {
 import * as assert from 'assert';
 import { SidebarProvider } from '../sidebarProvider';
 
-describe('End-to-End Webview-Host Communication Loop', () => {
-  // Point to real workspace root directory to load HTML content
-  const rootPath = path.resolve(__dirname, '..', '..', '..');
-  const extensionContextMock = {
-    extensionUri: { fsPath: rootPath },
-    workspaceState: {
-      get: (key: string, defaultValue?: any) => {
-        return mockWorkspaceState.has(key) ? mockWorkspaceState.get(key) : defaultValue;
-      },
-      update: async (key: string, value: any) => {
-        mockWorkspaceState.set(key, value);
-      }
+const rootPath = path.resolve(__dirname, '..', '..', '..');
+const extensionContextMock = {
+  extensionUri: { fsPath: rootPath },
+  subscriptions: [] as any[],
+  workspaceState: {
+    get: (key: string, defaultValue?: any) => {
+      return mockWorkspaceState.has(key) ? mockWorkspaceState.get(key) : defaultValue;
+    },
+    update: async (key: string, value: any) => {
+      mockWorkspaceState.set(key, value);
     }
-  } as any;
+  }
+} as any;
+
+describe('End-to-End Webview-Host Communication Loop', () => {
 
   test('IPC: resolveWebviewView establishes bidirectional communications', async () => {
     const provider = new SidebarProvider({ fsPath: rootPath } as any, extensionContextMock);
@@ -191,5 +209,54 @@ describe('End-to-End Webview-Host Communication Loop', () => {
     assert.strictEqual(receivedMessages[0].type, 'dndToggled');
     assert.strictEqual(receivedMessages[0].value, true);
     assert.strictEqual(mockWorkspaceState.get('neuroAnchor.dndActive'), true);
+  });
+});
+
+import { activate } from '../extension';
+
+describe('HTTP Deep-Link Bridge Server', () => {
+  test('HTTP: server responds to /openFile and opens target documents', async () => {
+    let openedDocPath: string | null = null;
+    
+    mockVscode.workspace.openTextDocument = async (filePath: string) => {
+      openedDocPath = filePath;
+      return { path: filePath } as any;
+    };
+    
+    mockVscode.window.activeTextEditor = undefined;
+
+    // Start HTTP server via activation
+    activate(extensionContextMock);
+
+    // Send HTTP POST request to the local server
+    try {
+      const res = await fetch('http://localhost:5174/openFile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: 'src/test.ts' })
+      });
+
+      if (res.status !== 200) {
+        const bodyText = await res.text();
+        console.error('SERVER ERROR BODY DETAILS:', bodyText);
+      }
+      assert.strictEqual(res.status, 200);
+      const data = await res.json() as { success: boolean; opened: string };
+      assert.strictEqual(data.success, true);
+      assert.ok(data.opened.includes('src/test.ts'));
+      
+      assert.ok(openedDocPath !== null);
+      assert.ok((openedDocPath as string).includes('src/test.ts'));
+    } finally {
+      // Clean up server by calling dispose on extension context subscriptions
+      const subscriptions = extensionContextMock.subscriptions || [];
+      for (const sub of subscriptions) {
+        if (sub && typeof sub.dispose === 'function') {
+          sub.dispose();
+        }
+      }
+      // Wait for socket to release cleanly
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   });
 });
