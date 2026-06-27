@@ -24,6 +24,15 @@ export interface ContextRecoveryState {
   suggestedCommand: string;
 }
 
+export const WhitelistedCommands = [
+  'npm test',
+  'npm run compile',
+  'npm run build',
+  'git status',
+  'git diff',
+  'git diff --stat'
+] as const;
+
 function loadConfig() {
   const defaults = {
     url: 'http://localhost:11434',

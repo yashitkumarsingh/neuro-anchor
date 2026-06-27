@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { exec } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { LocalAi } from '@neuro-anchor/core';
+import { LocalAi, WhitelistedCommands } from '@neuro-anchor/core';
 
 const STATE_FILE = path.join(__dirname, 'dashboard_state.json');
 
@@ -20,15 +20,6 @@ function loadState() {
 function saveState(data: any) {
   fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2), 'utf-8');
 }
-
-const WhitelistedCommands = [
-  'npm test',
-  'npm run compile',
-  'npm run build',
-  'git status',
-  'git diff',
-  'git diff --stat'
-];
 
 function executeCommand(cmd: string): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve) => {

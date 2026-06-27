@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { exec } from 'child_process';
 import { LocalAi } from './localAi';
 import { SettingsManager, CognitiveProfile } from './settingsManager';
+import { WhitelistedCommands } from '@neuro-anchor/core';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'neuro-anchor.sidebarView';
@@ -134,14 +135,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         case 'executeCommand': {
           const cmd = data.value as string;
           if (cmd) {
-            const whitelistedCommands = [
-              'npm test',
-              'npm run compile',
-              'npm run build',
-              'git status',
-              'git diff',
-              'git diff --stat'
-            ];
+            const whitelistedCommands = WhitelistedCommands;
 
             const normalizedCmd = cmd.trim().replace(/\s+/g, ' ');
             const isWhitelisted = whitelistedCommands.some(w => normalizedCmd === w || normalizedCmd.startsWith(w + ' '));
