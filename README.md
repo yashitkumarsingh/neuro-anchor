@@ -47,9 +47,11 @@ Provides layout controls to hide noisy editor components that cause sensory over
 
 ## 🛠 Project Layout
 
-* `extension/`: VS Code extension containing the extension entry points, settings profile controls, and the glassmorphic sidebar companion dashboard.
-* `cli/`: CLI utility tool matching features in the terminal.
-* `.agents/skills/`: Custom agent-scoped skills documenting frontend patterns and architectural messaging protocols.
+* `core/`: Platform-agnostic workspace containing shared models, heuristics, and configuration loaders.
+* `cli/`: CLI utility tool matching features in the terminal, including keyboard-interactive menus and custom stdout formatting options.
+* `extension/`: VS Code extension containing settings profile controls and the glassmorphic sidebar companion dashboard.
+* `dashboard/`: Standalone Vite + TypeScript local companion browser dashboard running at `http://localhost:5173`.
+* `.agents/`: Custom agent-scoped skills and style guidelines.
 
 ---
 
@@ -58,6 +60,7 @@ Provides layout controls to hide noisy editor components that cause sensory over
 ### Requirements
 * **Node.js**: `>= 22`
 * **Local LLM (Ollama)**: Recommended but not required (defaults to `http://localhost:11434` running model `llama3`). A robust, heuristic-based offline engine runs as a fallback automatically if Ollama is unreachable.
+* **Overrides File**: You can customize settings (Ollama URL/Model) by creating a `.neuro-anchor.json` file in the workspace root.
 
 ### Install Workspaces Dependencies
 At the workspace root directory:
@@ -71,10 +74,14 @@ npm run compile
 ```
 
 ### Run the CLI Tool
-You can invoke the compiled CLI tool locally:
+You can invoke the compiled CLI tool locally. Running it without commands launches the **ADHD-friendly keyboard-interactive menu**:
 ```bash
-node cli/dist/index.js status
-node cli/dist/index.js compile "My Jira ticket description" --mode 5m
+node cli/dist/index.js
+```
+For scripted pipelines (e.g. using `jq`), specify commands and format flags:
+```bash
+node cli/dist/index.js status --format json
+node cli/dist/index.js compile "My Jira ticket description" --mode 5m --format markdown
 node cli/dist/index.js translate "Let's clean this up later."
 node cli/dist/index.js shield on
 ```
@@ -90,6 +97,43 @@ npm install -g ./cli
 3. Press `F5` (or select **Run and Debug** -> **Launch Extension**).
 4. In the new extension development host window, find the Anchor (`⚓`) icon in your Activity Bar.
 5. Launch the companion sidebar dashboard!
+
+### Run the Standalone Web Dashboard
+To launch the visual companion dashboard in your web browser:
+```bash
+npm run dev --prefix dashboard
+```
+Then navigate to: **[http://localhost:5173](http://localhost:5173)**
+
+---
+
+## 📋 Completed Requirements Checklist
+
+- [x] **Platform-Agnostic Core Workspace (`@neuro-anchor/core`)** for shared business logic and heuristics fallbacks.
+- [x] **VS Code Extension Sidebar** supporting cognitive load profile toggles and webview-host IPC message loops.
+- [x] **ADHD-Friendly CLI Utility** supporting direct and keyboard-interactive execution prompts.
+- [x] **Standalone Browser Dashboard** displaying DND focus rings, Pomodoro timers, distraction buffers, and compilers.
+- [x] **Automated Git Pre-commit Hooks** to scan for hardcoded secrets and validate TypeScript compilations.
+- [x] **Permissive MIT Licensing** and detailed developer handbook documentation.
+- [x] **Unit & E2E Integration Test Suite** running on Node 22 test runner.
+
+---
+
+## 🔮 The Grand Vision (Product Roadmap)
+
+Neuro-Anchor aims to become a comprehensive cognitive accessibility operating system for developers:
+
+### Phase 1: Deep Workspace Linking (Short-Term)
+* **Web-to-IDE Deep Link**: Establish a WebSocket connection between the visual browser dashboard and the VS Code Extension host so that clicking on a compiled task file chip automatically focuses and opens the target file inside your active VS Code instance.
+* **Visual Configuration Editor**: Build a settings screen in the web companion to visually manage `.neuro-anchor.json` parameters.
+
+### Phase 2: OS-Level Shield Integrations (Mid-Term)
+* **Notification Snoozing**: Hook the Interruption Shield into Slack, Discord, and OS notification systems to mute alerts during DND countdowns, releasing a "Focus Digest" only when the block completes.
+* **Terminal Stream Integration**: Stream build/test execution outputs directly into the dashboard console panel with file watchers.
+
+### Phase 3: Speech-To-Task Assistant (Long-Term)
+* **Voice Distraction Buffering**: Integrate a quick-access voice assistant to let developers speak out distractions ("Snooze message from Sam") and automatically transcribe them to the buffer queue.
+* **Profile Fine-Tuning**: Allow AI prompt fine-tuning tailored to specific neurotypes (ADHD task lists vs. Autistic high-context reviews).
 
 ---
 
